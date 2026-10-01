@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observaciones Ciudadanas — EAE Modificación PRC Hospital Carlos Van Buren</title>
+<style>
+:root{
+  --brand:#1d4ed8;
+  --brand-dark:#1e3a8a;
+  --brand-light:#eff4ff;
+  --ink:#0f172a;
+  --ink-soft:#475569;
+  --ink-faint:#94a3b8;
+  --line:#e2e8f0;
+  --line-soft:#f1f5f9;
+  --bg:#f7f9fc;
+  --panel:#ffffff;
+  --verde:#16a34a; --verde-bg:#dcfce7;
+  --amarillo:#ca8a04; --amarillo-bg:#fef9c3;
+  --naranja:#ea580c; --naranja-bg:#ffedd5;
+  --rojo:#dc2626; --rojo-bg:#fee2e2;
+  --morado:#7c3aed; --morado-bg:#ede9fe;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.5;
+}
+a{color:var(--brand);}
+button,select,input{font-family:inherit;}
+
+header.top{
+  background:linear-gradient(135deg,#1e3a8a,#1d4ed8 60%,#2563eb);
+  color:#fff; padding:36px 20px 70px;
+}
+header.top .inner{max-width:1080px;margin:0 auto;}
+header.top .eyebrow{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#bfdbfe;margin-bottom:8px;}
+header.top h1{font-size:26px;margin:0 0 10px;font-weight:800;line-height:1.25;max-width:720px;}
+header.top p{font-size:14.5px;color:#dbeafe;max-width:660px;margin:0;}
+
+main{max-width:1080px;margin:-46px auto 60px;padding:0 20px;}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.kpi{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;}
+.kpi .n{font-size:24px;font-weight:800;color:var(--brand-dark);}
+.kpi .l{font-size:11.5px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.02em;margin-top:2px;}
+
+.card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:20px;}
+.card h2{font-size:15.5px;margin:0 0 4px;}
+.card .sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;}
+
+#mapa-publico{height:360px;border-radius:10px;overflow:hidden;}
+.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1;}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.filters select, .filters input{
+  border:1px solid var(--line); border-radius:9px; padding:9px 12px; font-size:13px; background:#fff; color:var(--ink);
+}
+.filters input[type="search"]{flex:1;min-width:220px;}
+.filters .count{margin-left:auto;align-self:center;font-size:12.5px;color:var(--ink-soft);}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.obs-card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;display:flex;flex-direction:column;gap:10px;}
+.obs-card .tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+.tag.origen{background:var(--brand-light);color:var(--brand-dark);}
+.tag.tipo-valor{background:var(--verde-bg);color:#166534;}
+.tag.tipo-problema{background:var(--rojo-bg);color:#991b1b;}
+.tag.tipo-conflicto{background:var(--naranja-bg);color:#9a3412;}
+.tag.tipo-limitante{background:var(--amarillo-bg);color:#854d0e;}
+.tag.tipo-noidentificado{background:var(--line-soft);color:var(--ink-soft);}
+.tag.estado{background:var(--morado-bg);color:#5b21b6;margin-left:auto;}
+.obs-card .sintesis{font-size:13.5px;color:var(--ink);line-height:1.55;}
+.obs-card .meta{font-size:11.5px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:4px 10px;border-top:1px dashed var(--line);padding-top:10px;}
+
+.empty-state{padding:50px 20px;text-align:center;color:var(--ink-faint);}
+.empty-state .ic{font-size:34px;margin-bottom:10px;}
+
+footer{max-width:1080px;margin:0 auto 50px;padding:0 20px;font-size:12px;color:var(--ink-faint);text-align:center;}
+footer a{color:var(--ink-soft);}
+
+.legend-row{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink-soft);margin-top:10px;}
+.legend-row .item{display:flex;align-items:center;gap:5px;}
+.legend-row .sw{width:9px;height:9px;border-radius:50%;}
+
+@media (max-width:640px){
+  header.top h1{font-size:21px;}
+  main{margin-top:-30px;}
+  .filters .count{margin-left:0;width:100%;}
+}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="eyebrow">Participación ciudadana · Municipalidad de Valparaíso</div>
+    <h1>Observaciones recibidas — Evaluación Ambiental Estratégica, Modificación del Plan Regulador Comunal (Hospital Carlos Van Buren)</h1>
+    <p>Aquí puedes revisar una síntesis de los antecedentes y observaciones que la comunidad ha hecho llegar durante este proceso, una vez que el equipo técnico las ha revisado. Los datos personales de quienes participan no se publican.</p>
+  </div>
+</header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <h2>Mapa de observaciones</h2>
+    <p class="sub">Ubicación aproximada de las observaciones que incluyen una referencia geográfica.</p>
+    <div id="mapa-publico"></div>
+    <div class="legend-row" id="mapa-legend"></div>
+  </div>
+
+  <div class="card">
+    <h2>Listado de observaciones</h2>
+    <p class="sub">Filtra por materia, por objetivo o criterio relacionado, o busca una palabra clave.</p>
+    <div class="filters">
+      <select id="f-materia"></select>
+      <select id="f-origen"></select>
+      <select id="f-tipo"></select>
+      <input type="search" id="f-texto" placeholder="Buscar en el texto...">
+      <span class="count" id="f-count"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+
+<footer>
+  Esta vista muestra únicamente observaciones ya revisadas por el equipo técnico, sin datos personales de quienes las presentaron.<br>
+  Municipalidad de Valparaíso · Fase de Diagnóstico y Tendencias · Modificación Sustancial del Plan Regulador Comunal — Hospital Carlos Van Buren
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   DATOS
+   -----------------------------------------------------------
+   Esta página es una maqueta funcional: los datos de abajo son
+   de ejemplo. Cuando exista un backend compartido (ver punto 5
+   del diseño entregado al equipo de desarrollo), esta sección se
+   reemplaza por una llamada fetch() a la API pública, que debe
+   devolver exactamente este mismo subconjunto de campos —nunca
+   nombre, RUT, domicilio, correo, teléfono ni el texto original
+   crudo del aporte— filtrado a registros con estado "Revisado" o
+   "Validado", síntesis no vacía y pertinencia distinta de
+   "No pertinente".
+   ========================================================= */
+const ORIGEN_LABEL = {
+  "Antecedentes u observaciones generales": "Antecedentes generales",
+  "OAE1": "Objetivo Ambiental Estratégico N°1",
+  "OAE2": "Objetivo Ambiental Estratégico N°2",
+  "OAE3": "Objetivo Ambiental Estratégico N°3",
+  "CDS1": "Criterio de Desarrollo Sustentable N°1",
+  "CDS2": "Criterio de Desarrollo Sustentable N°2",
+  "CDS3": "Criterio de Desarrollo Sustentable N°3"
+};
+const TIPO_LABEL = {"Valor":"Valor destacado","Problema":"Problema planteado","Conflicto":"Conflicto identificado","Limitante":"Limitante señalada","No identificado":"Sin clasificar"};
+const TIPO_CLASE = {"Valor":"tipo-valor","Problema":"tipo-problema","Conflicto":"tipo-conflicto","Limitante":"tipo-limitante","No identificado":"tipo-noidentificado"};
+const ESTADO_PUBLICO = {"Revisado":"En revisión final","Validado":"Revisión completa"};
+
+const OBSERVACIONES = [
+  {fecha:"2026-09-05", materia:"Movilidad y accesibilidad", origen:"OAE1", tipo:"Problema", estado:"Validado",
+    sintesis:"Preocupación por el aumento de tráfico vehicular en Av. Colón asociado al crecimiento de infraestructura hospitalaria, especialmente en horario punta.",
+    ubicacion:{lat:-33.0445,lng:-71.6150}},
+  {fecha:"2026-08-30", materia:"Patrimonio cultural", origen:"CDS2", tipo:"Valor", estado:"Revisado",
+    sintesis:"Se destaca la importancia de resguardar el valor patrimonial de las fachadas colindantes al hospital frente al crecimiento del recinto.",
+    ubicacion:{lat:-33.0392,lng:-71.6158}},
+  {fecha:"2026-08-30", materia:"Riesgos naturales", origen:"Antecedentes u observaciones generales", tipo:"No identificado", estado:"Revisado",
+    sintesis:"Se aporta antecedente técnico sobre riesgo de remoción en masa en el sector de Cerro Barón, relevante para el diagnóstico territorial.",
+    ubicacion:{lat:-33.0385,lng:-71.6172}},
+  {fecha:"2026-08-24", materia:"Movilidad y accesibilidad", origen:"OAE3", tipo:"Limitante", estado:"Revisado",
+    sintesis:"Se solicita resguardar la accesibilidad peatonal y la conectividad de las calles Simón Bolívar y Chacabuco durante y después de las obras.",
+    ubicacion:{lat:-33.0430,lng:-71.6210}},
+  {fecha:"2026-08-10", materia:"Infraestructura y equipamiento de salud", origen:"CDS1", tipo:"No identificado", estado:"Revisado",
+    sintesis:"Antecedente técnico sobre la proyección de demanda hospitalaria del área norte de Valparaíso, aportado por un organismo público.",
+    ubicacion:null},
+  {fecha:"2026-08-05", materia:"Riesgos naturales", origen:"OAE2", tipo:"Valor", estado:"Validado",
+    sintesis:"Se valora que se mantenga incorporado el actual sistema de gestión de riesgos naturales, dado que el sector presenta antecedentes de remoción en masa.",
+    ubicacion:{lat:-33.0432,lng:-71.6165}},
+  {fecha:"2026-08-15", materia:"Patrimonio cultural", origen:"CDS2", tipo:"Conflicto", estado:"Revisado",
+    sintesis:"Se solicita incorporar un estudio de impacto patrimonial antes de aprobar aumentos de altura o volumetría en el sector declarado zona típica.",
+    ubicacion:{lat:-33.0398,lng:-71.6180}},
+  {fecha:"2026-09-01", materia:"Paisaje urbano", origen:"CDS2", tipo:"Valor", estado:"En análisis",
+    sintesis:"Se solicita mantener y potenciar las áreas verdes existentes en el diseño final del proyecto.",
+    ubicacion:{lat:-33.0410,lng:-71.6140}},
+  {fecha:"2026-09-07", materia:"Ámbito territorial", origen:"Antecedentes u observaciones generales", tipo:"No identificado", estado:"Revisado",
+    sintesis:"Se aportan antecedentes fotográficos sobre el estado actual de la infraestructura peatonal del entorno inmediato al hospital.",
+    ubicacion:null},
+  {fecha:"2026-09-09", materia:"Medio ambiente", origen:"OAE1", tipo:"Problema", estado:"Validado",
+    sintesis:"Se solicita evaluar medidas de mitigación de ruido y emisiones durante la etapa de construcción, dada la proximidad a viviendas.",
+    ubicacion:{lat:-33.0448,lng:-71.6135}}
+].filter(o => o.estado==="Revisado" || o.estado==="Validado");
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function fmtDate(iso){
+  const d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("es-CL",{day:"2-digit",month:"long",year:"numeric"});
+}
+
+let filtros = {materia:"", origen:"", tipo:"", texto:""};
+
+function poblarFiltros(){
+  const materias = [...new Set(OBSERVACIONES.map(o=>o.materia))].sort();
+  const origenes = [...new Set(OBSERVACIONES.map(o=>o.origen))];
+  const tipos = [...new Set(OBSERVACIONES.map(o=>o.tipo))];
+
+  $("#f-materia").innerHTML = '<option value="">Todas las materias</option>' + materias.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join("");
+  $("#f-origen").innerHTML = '<option value="">Todos los objetivos/criterios</option>' + origenes.map(o=>'<option value="'+esc(o)+'">'+esc(ORIGEN_LABEL[o]||o)+'</option>').join("");
+  $("#f-tipo").innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t=>'<option value="'+esc(t)+'">'+esc(TIPO_LABEL[t]||t)+'</option>').join("");
+
+  $("#f-materia").onchange = e=>{filtros.materia=e.target.value; render();};
+  $("#f-origen").onchange = e=>{filtros.origen=e.target.value; render();};
+  $("#f-tipo").onchange = e=>{filtros.tipo=e.target.value; render();};
+  $("#f-texto").oninput = e=>{filtros.texto=e.target.value.toLowerCase(); render();};
+}
+
+function aplicarFiltros(){
+  return OBSERVACIONES.filter(o=>{
+    if(filtros.materia && o.materia!==filtros.materia) return false;
+    if(filtros.origen && o.origen!==filtros.origen) return false;
+    if(filtros.tipo && o.tipo!==filtros.tipo) return false;
+    if(filtros.texto && !o.sintesis.toLowerCase().includes(filtros.texto)) return false;
+    return true;
+  });
+}
+
+function renderKpis(){
+  const total = OBSERVACIONES.length;
+  const materias = new Set(OBSERVACIONES.map(o=>o.materia)).size;
+  const conUbicacion = OBSERVACIONES.filter(o=>o.ubicacion).length;
+  $("#kpis").innerHTML = [
+    ["Observaciones publicadas", total],
+    ["Materias distintas abordadas", materias],
+    ["Con ubicación geográfica", conUbicacion]
+  ].map(([l,n])=>'<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+'</div></div>').join("");
+}
+
+function renderGrid(){
+  const rows = aplicarFiltros();
+  $("#f-count").textContent = rows.length+" de "+OBSERVACIONES.length+" observaciones";
+  const grid = $("#grid");
+  if(rows.length===0){
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="ic">🔎</div>No hay observaciones que coincidan con los filtros seleccionados.</div>';
+    return;
+  }
+  grid.innerHTML = rows.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(o=>
+    '<div class="obs-card">'
+    + '<div class="tag-row"><span class="tag origen">'+esc(ORIGEN_LABEL[o.origen]||o.origen)+'</span>'
+      + '<span class="tag '+(TIPO_CLASE[o.tipo]||"tipo-noidentificado")+'">'+esc(TIPO_LABEL[o.tipo]||o.tipo)+'</span>'
+      + '<span class="tag estado">'+esc(ESTADO_PUBLICO[o.estado]||o.estado)+'</span></div>'
+    + '<div class="sintesis">'+esc(o.sintesis)+'</div>'
+    + '<div class="meta"><span>📁 '+esc(o.materia)+'</span><span>📅 '+fmtDate(o.fecha)+'</span>'+(o.ubicacion?'<span>📍 Con ubicación en el mapa</span>':'')+'</div>'
+    + '</div>'
+  ).join("");
+}
+
+let mapaInstancia = null;
+function renderMapa(){
+  if(typeof L === "undefined") return;
+  const conUbicacion = OBSERVACIONES.filter(o=>o.ubicacion);
+  const colorTipo = {"Valor":"#16a34a","Problema":"#dc2626","Conflicto":"#ea580c","Limitante":"#ca8a04","No identificado":"#64748b"};
+  if(!mapaInstancia){
+    mapaInstancia = L.map("mapa-publico").setView([-33.0415,-71.6165], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'}).addTo(mapaInstancia);
+  }
+  conUbicacion.forEach(o=>{
+    L.circleMarker([o.ubicacion.lat,o.ubicacion.lng], {radius:8, color:"#fff", weight:2, fillColor: colorTipo[o.tipo]||"#1d4ed8", fillOpacity:.95})
+      .addTo(mapaInstancia)
+      .bindPopup('<b>'+esc(ORIGEN_LABEL[o.origen]||o.origen)+'</b><br><span style="font-size:12px;">'+esc(o.sintesis.slice(0,110))+(o.sintesis.length>110?"…":"")+'</span>');
+  });
+  setTimeout(()=>mapaInstancia.invalidateSize(), 150);
+  $("#mapa-legend").innerHTML = Object.entries({"Valor":"#16a34a","Problema":"#dc2626","Conflicto":"#ea580c","Limitante":"#ca8a04","Sin clasificar":"#64748b"})
+    .map(([l,c])=>'<div class="item"><span class="sw" style="background:'+c+';"></span>'+l+'</div>').join("");
+}
+
+function render(){
+  renderKpis();
+  renderGrid();
+}
+
+poblarFiltros();
+render();
+renderMapa();
+
+})();
+</script>
+</body>
+</html>

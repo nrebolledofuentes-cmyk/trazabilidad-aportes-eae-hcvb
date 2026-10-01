@@ -345,7 +345,21 @@ fieldset legend{font-size:12px;font-weight:700;color:var(--brand-dark);padding:0
 .legend-row{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink-soft);margin-top:10px;}
 .legend-row .item{display:flex;align-items:center;gap:6px;}
 .legend-row .sw{width:10px;height:10px;border-radius:3px;}
+
+.bitacora-list{position:relative;padding-left:4px;}
+.bitacora-item{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px;}
+.bitacora-item:last-child{border-bottom:none;}
+.bitacora-fecha{color:var(--ink-faint);font-size:11px;white-space:nowrap;}
+.bitacora-cuerpo{color:var(--ink);}
+
+.report-block{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--line-soft);border-radius:8px;padding:14px 16px;line-height:1.6;}
+
+/* Mapa */
+.map-box{border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1;}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 
@@ -549,29 +563,33 @@ function nextAporteId(targetState){
    EXPORTAR A EXCEL (.xlsx) — mismas hojas que la Matriz Maestra
    ========================================================= */
 function exportarExcel(){
-  const headersRegistro = ["Folio de ingreso","Fecha de ingreso","Hora de ingreso","Canal de ingreso","Tipo de participante","Nombre completo","RUT","Domicilio","Correo electrónico","Teléfono","Nombre de la organización o institución","RUT de la organización o institución","Correo electrónico de la organización o institución","Tipo de aporte declarado","Texto del antecedente u observación general","Documentos adjuntos","N° de documentos adjuntos","Identificación de documentos adjuntos","Enlace/ubicación de documentos adjuntos","Fecha de registro en plataforma","Registrado por"];
+  const headersRegistro = ["Folio de ingreso","Fecha de ingreso","Hora de ingreso","Canal de ingreso","Tipo de participante","Nombre completo","RUT","Domicilio","Correo electrónico","Teléfono","Nombre de la organización o institución","RUT de la organización o institución","Correo electrónico de la organización o institución","Tipo de aporte declarado","Texto del antecedente u observación general","Documentos adjuntos","N° de documentos adjuntos","Identificación de documentos adjuntos","Enlace/ubicación de documentos adjuntos","Ubicación geográfica (lat, lng)","Referencia de ubicación","Fecha de registro en plataforma","Registrado por"];
   const filasRegistro = [headersRegistro];
   state.registros.slice().sort((a,b)=>a.fechaIngreso.localeCompare(b.fechaIngreso)).forEach(r=>{
+    const u = r.ubicacion;
     filasRegistro.push([
       r.folio, fmtDate(r.fechaIngreso), r.horaIngreso, r.canalIngreso, r.tipoParticipante, r.nombreCompleto, r.rut, r.domicilio, r.correo, r.telefono,
       r.nombreOrganizacion, r.rutOrganizacion, r.correoOrganizacion, r.tipoAporteDeclarado, r.textoAporte,
       r.adjuntaDocumentos ? "Sí" : "No", r.numDocumentos, r.idDocumentos, r.enlaceDocumentos,
+      (u && u.lat!=null) ? (u.lat.toFixed(6)+", "+u.lng.toFixed(6)) : "",
+      (u && u.referencia) ? u.referencia : "",
       fmtDate(r.fechaRegistroSistema), usuarioNombre(r.registradoPor)
     ]);
   });
 
-  const headersAportes = ["ID de aporte","Folio de ingreso","Origen del aporte","Texto original del aporte","Síntesis del aporte","Tipo de aporte según análisis","Materia principal del aporte","Componente del Análisis Sistémico relacionado","Contenido del Acto de Inicio relacionado","Vinculación con Objetivo Ambiental Estratégico","Vinculación con Criterio de Desarrollo Sustentable","Vinculación con el Diagnóstico Integrado","Vinculación con Factor Crítico de Decisión","Pertinencia respecto del proceso","Fundamento de pertinencia","Tratamiento del aporte","Fundamento del tratamiento","Responsable del análisis","Unidad responsable","Estado del análisis","Fecha de análisis","Antigüedad (días desde el ingreso)","Banda de alerta"];
+  const headersAportes = ["ID de aporte","Folio de ingreso","Identificación de documentos adjuntos (del ingreso)","Origen del aporte","Texto original del aporte","Síntesis del aporte","Tipo de aporte según análisis","Materia principal del aporte","Componente del Análisis Sistémico relacionado","Contenido del Acto de Inicio relacionado","Vinculación con Objetivo Ambiental Estratégico","Vinculación con Criterio de Desarrollo Sustentable","Vinculación con el Diagnóstico Integrado","Vinculación con Factor Crítico de Decisión","Pertinencia respecto del proceso","Fundamento de pertinencia","Tratamiento del aporte","Fundamento del tratamiento","Responsable del análisis","Unidad responsable","Estado del análisis","Fecha de análisis","Antigüedad (días desde el ingreso)","Banda de alerta","Bitácora resumida"];
   const filasAportes = [headersAportes];
   state.aportes.forEach(a=>{
     const r = registro(a.folioIngreso);
     const dias = r ? diasTranscurridos(r.fechaIngreso) : "";
     const banda = r ? BANDA_LABEL[bandaAlerta(dias, a.estadoAnalisis)] : "";
+    const bitacoraTxt = (a.bitacora||[]).map(ev=>fmtFechaHora(ev.fecha)+" "+ev.accion+" ("+usuarioNombre(ev.usuarioId)+")").join(" | ");
     filasAportes.push([
-      a.idAporte, a.folioIngreso, a.origenAporte, a.textoOriginal, a.sintesis, a.tipoAporteAnalisis, a.materiaPrincipal, a.componenteSistemico, a.contenidoActoInicio,
+      a.idAporte, a.folioIngreso, (r && r.adjuntaDocumentos) ? r.idDocumentos : "", a.origenAporte, a.textoOriginal, a.sintesis, a.tipoAporteAnalisis, a.materiaPrincipal, a.componenteSistemico, a.contenidoActoInicio,
       a.vinculacionOAE, a.vinculacionCDS, a.vinculacionDiagnostico, a.vinculacionFCD, a.pertinencia, a.fundamentoPertinencia, a.tratamiento, a.fundamentoTratamiento,
       a.responsableAsignado ? usuarioNombre(a.responsableAsignado) : "Sin asignar",
       a.responsableAsignado ? usuarioUnidad(a.responsableAsignado) : "",
-      a.estadoAnalisis, fmtDate(a.fechaAnalisis), dias, banda
+      a.estadoAnalisis, fmtDate(a.fechaAnalisis), dias, banda, bitacoraTxt
     ]);
   });
 
@@ -627,6 +645,11 @@ function seedExampleData(s){
       nombreCompleto: r.nombre,
       rut: "1"+(10000000+r.dias*137).toString().slice(0,7)+"-"+(r.dias%9),
       domicilio: "Sector "+["Cerro Barón","Playa Ancha","El Almendral","Cerro Cordillera"][r.dias%4]+", Valparaíso",
+      ubicacion: (r.dias%4!==3) ? {
+        lat: [-33.038,-33.036,-33.045,-33.043][r.dias%4] + (r.dias%5)*0.0012,
+        lng: [-71.617,-71.646,-71.615,-71.628][r.dias%4] - (r.dias%5)*0.0012,
+        referencia: "Sector "+["Cerro Barón","Playa Ancha","El Almendral","Cerro Cordillera"][r.dias%4]
+      } : null,
       correo: r.correo,
       telefono: r.tel,
       nombreOrganizacion: r.org || "",
@@ -736,6 +759,16 @@ function esSuper(){ return !!sesionUsuario().superUsuario; }
 function puedeAccederRegistro(){ return esSuper() || !!sesionUsuario().accesoRegistro; }
 function puedeAccederAnalisis(){ return esSuper() || !!sesionUsuario().accesoAnalisis; }
 function usuarioUnidad(id){ const u=usuario(id); return u ? u.unidad : ""; }
+function registrarBitacora(aporte, accion, detalle){
+  if(!aporte.bitacora) aporte.bitacora = [];
+  aporte.bitacora.push({ fecha: new Date().toISOString(), usuarioId: state.sesionUsuarioId, accion, detalle: detalle||"" });
+}
+function fmtFechaHora(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString("es-CL",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
+}
 function initials(nombre){ return nombre.split(/\s+/).map(p=>p[0]).slice(0,2).join("").toUpperCase(); }
 function registro(folio){ return state.registros.find(r=>r.folio===folio); }
 function toast(msg){
@@ -797,6 +830,7 @@ const NAV_ITEMS = [
   {id:"dashboard", icon:"📊", label:"Panel general", check:()=>true},
   {id:"registros", icon:"📥", label:"Registro de ingresos", check:puedeAccederRegistro},
   {id:"aportes", icon:"🔍", label:"Análisis y seguimiento", badgeKey:"rojo", check:puedeAccederAnalisis},
+  {id:"mapa", icon:"🗺️", label:"Mapa de observaciones", check:()=>puedeAccederRegistro()||puedeAccederAnalisis()},
   {id:"diccionario", icon:"📖", label:"Diccionario de variables", check:()=>true},
   {id:"protocolo", icon:"📋", label:"Protocolo operativo", check:()=>true},
   {id:"config", icon:"⚙️", label:"Configuración", check:esSuper}
@@ -808,7 +842,7 @@ function renderNav(){
   nav.innerHTML = "";
   const visible = id => NAV_ITEMS.find(n=>n.id===id).check();
   nav.appendChild(el("div",{class:"nav-section"},["Trabajo diario"]));
-  ["dashboard","registros","aportes"].forEach(id=>{ if(visible(id)) appendNavItem(nav, NAV_ITEMS.find(n=>n.id===id)); });
+  ["dashboard","registros","aportes","mapa"].forEach(id=>{ if(visible(id)) appendNavItem(nav, NAV_ITEMS.find(n=>n.id===id)); });
   nav.appendChild(el("div",{class:"nav-section"},["Referencia metodológica"]));
   ["diccionario","protocolo"].forEach(id=>appendNavItem(nav, NAV_ITEMS.find(n=>n.id===id)));
   if(visible("config")){
@@ -849,6 +883,7 @@ function renderView(id){
   if(id==="dashboard") renderDashboard();
   else if(id==="registros") renderRegistros();
   else if(id==="aportes") renderAportes();
+  else if(id==="mapa") renderMapa();
   else if(id==="diccionario") renderDiccionario();
   else if(id==="protocolo") renderProtocolo();
   else if(id==="config") renderConfig();
@@ -1094,7 +1129,28 @@ function openRegistroForm(){
       + gridField('N° de documentos adjuntos','<input type="number" min="0" name="numDocumentos" value="0">')
       + gridField('Identificación de documentos adjuntos','<input name="idDocumentos" placeholder="Ej: DOC-ING-2026-0001-01">', true)
     )
+    + fieldset("Ubicación geográfica (opcional)", ''
+      + gridField('Haz clic en el mapa para marcar el lugar al que se refiere el aporte', '<div id="mapa-nuevo-ingreso" class="map-box" style="height:220px;"></div>', true)
+      + gridField('Coordenadas', '<input name="ubicacionCoords" readonly placeholder="Sin marcar">')
+      + gridField('Referencia de ubicación', '<input name="ubicacionReferencia" placeholder="Ej: Esquina Av. Colón con Simón Bolívar">')
+    )
     + '</form>';
+
+  let marcadorNuevoIngreso = null;
+  setTimeout(()=>{
+    if(typeof L === "undefined") return;
+    const mapDiv = document.getElementById("mapa-nuevo-ingreso");
+    if(!mapDiv) return;
+    const mapa = L.map(mapDiv).setView([-33.0458, -71.6197], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapa);
+    mapa.on("click", (e)=>{
+      if(marcadorNuevoIngreso) mapa.removeLayer(marcadorNuevoIngreso);
+      marcadorNuevoIngreso = L.marker(e.latlng).addTo(mapa);
+      const coordsInput = document.querySelector('#form-registro input[name="ubicacionCoords"]');
+      if(coordsInput) coordsInput.value = e.latlng.lat.toFixed(6)+", "+e.latlng.lng.toFixed(6);
+    });
+    setTimeout(()=>mapa.invalidateSize(), 150);
+  }, 50);
 
   openModal({
     title:"Nuevo ingreso",
@@ -1127,6 +1183,11 @@ function openRegistroForm(){
           numDocumentos: Number(fd.get("numDocumentos")||0),
           idDocumentos: fd.get("idDocumentos")||"",
           enlaceDocumentos: "",
+          ubicacion: marcadorNuevoIngreso ? {
+            lat: marcadorNuevoIngreso.getLatLng().lat,
+            lng: marcadorNuevoIngreso.getLatLng().lng,
+            referencia: fd.get("ubicacionReferencia")||""
+          } : (fd.get("ubicacionReferencia") ? {lat:null, lng:null, referencia: fd.get("ubicacionReferencia")} : null),
           fechaRegistroSistema: todayISO(),
           registradoPor: state.sesionUsuarioId
         });
@@ -1158,6 +1219,19 @@ function openRegistroDetalle(folio){
     + detailItem("Teléfono", r.telefono||"—")
     + '</div>';
 
+  if(r.ubicacion && (r.ubicacion.lat!=null || r.ubicacion.referencia)){
+    const u = r.ubicacion;
+    html += '<div class="subhead">Ubicación geográfica</div>';
+    if(u.lat!=null){
+      html += '<div id="mapa-detalle-registro" class="map-box" style="height:180px;margin-bottom:8px;"></div>'
+        + '<div class="muted" style="font-size:12px;">'+u.lat.toFixed(6)+', '+u.lng.toFixed(6)
+        + ' · <a href="https://www.openstreetmap.org/?mlat='+u.lat+'&mlon='+u.lng+'&zoom=16" target="_blank" rel="noopener">Ver en mapa completo ↗</a></div>';
+    }
+    if(u.referencia){
+      html += '<div class="quote-block" style="margin-top:8px;">'+esc(u.referencia)+'</div>';
+    }
+  }
+
   if(r.nombreOrganizacion){
     html += '<div class="subhead">Organización representada</div><div class="detail-grid">'
       + detailItem("Nombre", r.nombreOrganizacion)
@@ -1186,6 +1260,18 @@ function openRegistroDetalle(folio){
 
   body.innerHTML = html;
   $all("[data-aporte]", body).forEach(d=>d.addEventListener("click",()=>{ closeModal(); openAporteDetalle(d.dataset.aporte); }));
+
+  if(r.ubicacion && r.ubicacion.lat!=null){
+    setTimeout(()=>{
+      if(typeof L === "undefined") return;
+      const mapDiv = document.getElementById("mapa-detalle-registro");
+      if(!mapDiv) return;
+      const mapa = L.map(mapDiv, {zoomControl:false, dragging:false, scrollWheelZoom:false}).setView([r.ubicacion.lat, r.ubicacion.lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapa);
+      L.marker([r.ubicacion.lat, r.ubicacion.lng]).addTo(mapa);
+      setTimeout(()=>mapa.invalidateSize(), 150);
+    }, 50);
+  }
 
   openModal({
     title:"Ingreso "+r.folio,
@@ -1320,7 +1406,7 @@ function openAporteForm(folioPrefill){
       + gridField('Síntesis del aporte', '<textarea name="sintesis" placeholder="Resumen breve y neutral, elaborado por el equipo."></textarea>', true)
     )
     + fieldset("Asignación", ''
-      + gridField('Responsable asignado', '<select name="responsableAsignado"><option value="">Sin asignar</option>'+state.usuarios.filter(u=>u.accesoAnalisis||u.superUsuario).map(u=>'<option value="'+u.id+'">'+esc(u.nombre)+' — '+esc(u.unidad)+'</option>').join("")+'</select>')
+      + gridField('Responsable asignado', '<select name="responsableAsignado" '+(esSuper()?"":"disabled")+'><option value="">Sin asignar</option>'+state.usuarios.filter(u=>u.accesoAnalisis||u.superUsuario).map(u=>'<option value="'+u.id+'">'+esc(u.nombre)+' — '+esc(u.unidad)+'</option>').join("")+'</select>'+(esSuper()?'':'<div class="help">Solo un super usuario puede asignar responsables.</div>'))
       + gridField('Estado del análisis', '<select name="estadoAnalisis">'+selectOptions(ESTADOS_ANALISIS,"Pendiente",false)+'</select>')
     )
     + '</form>';
@@ -1342,7 +1428,8 @@ function openAporteForm(folioPrefill){
         if(!form.reportValidity()) return;
         const fd = new FormData(form);
         const id = nextAporteId();
-        state.aportes.push({
+        const respInicial = esSuper() ? (fd.get("responsableAsignado")||null) : null;
+        const nuevoAporte = {
           idAporte:id,
           folioIngreso: fd.get("folioIngreso"),
           origenAporte: fd.get("origenAporte"),
@@ -1351,12 +1438,15 @@ function openAporteForm(folioPrefill){
           tipoAporteAnalisis:"", materiaPrincipal:"", componenteSistemico:"", contenidoActoInicio:"",
           vinculacionOAE:"No aplica", vinculacionCDS:"No aplica", vinculacionDiagnostico:"No identificado", vinculacionFCD:"Pendiente de definición de FCD",
           pertinencia:"", fundamentoPertinencia:"", tratamiento:"", fundamentoTratamiento:"",
-          responsableAsignado: fd.get("responsableAsignado")||null,
+          responsableAsignado: respInicial,
           estadoAnalisis: fd.get("estadoAnalisis")||"Pendiente",
           fechaAnalisis:"",
           fechaCreacion: todayISO(),
-          fechaAsignacion: fd.get("responsableAsignado") ? todayISO() : ""
-        });
+          fechaAsignacion: respInicial ? todayISO() : "",
+          bitacora: []
+        };
+        registrarBitacora(nuevoAporte, "Creación", "Aporte creado"+(respInicial?" y asignado a "+usuarioNombre(respInicial):"."));
+        state.aportes.push(nuevoAporte);
         saveState();
         closeModal();
         toast("Aporte "+id+" creado y vinculado a "+fd.get("folioIngreso")+".");
@@ -1422,6 +1512,22 @@ function openAporteDetalle(idAporte){
   );
 
   html += '</form>';
+
+  html += '<div class="subhead">Bitácora de seguimiento</div>';
+  const bitacora = a.bitacora || [];
+  if(bitacora.length===0){
+    html += '<div class="empty-state" style="padding:16px;"><div class="ic">🕒</div>Sin movimientos registrados todavía.</div>';
+  } else {
+    html += '<div class="bitacora-list">';
+    bitacora.slice().reverse().forEach(ev=>{
+      html += '<div class="bitacora-item">'
+        + '<div class="bitacora-fecha">'+fmtFechaHora(ev.fecha)+'</div>'
+        + '<div class="bitacora-cuerpo"><b>'+esc(ev.accion)+'</b> — '+esc(ev.detalle)+'<div class="muted" style="font-size:11px;">por '+esc(usuarioNombre(ev.usuarioId))+'</div></div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+
   body.innerHTML = html;
 
   if(!puedeEditar){
@@ -1429,13 +1535,19 @@ function openAporteDetalle(idAporte){
   }
   $all("[data-goto-folio]", body).forEach(link=>link.addEventListener("click",(e)=>{ e.preventDefault(); closeModal(); openRegistroDetalle(link.dataset.gotoFolio); }));
 
-  const actions = [{label:"Cerrar", cls:"btn", onClick:closeModal}];
+  const actions = [
+    {label:"Reporte resumido", cls:"btn", onClick:()=>abrirReporteBitacora(a)},
+    {label:"Cerrar", cls:"btn", onClick:closeModal}
+  ];
   if(puedeEditar){
     actions.push({label:"Guardar cambios", cls:"btn primary", onClick:()=>{
       const form = $("#form-aporte-detalle");
       const fd = new FormData(form);
       const prevResp = a.responsableAsignado;
+      const prevEstado = a.estadoAnalisis;
       const nuevoResp = esSuper() ? (fd.get("responsableAsignado")||null) : a.responsableAsignado;
+      const nuevoEstado = fd.get("estadoAnalisis")||"Pendiente";
+      const camposAnalisisPrev = JSON.stringify([a.sintesis,a.tipoAporteAnalisis,a.materiaPrincipal,a.componenteSistemico,a.contenidoActoInicio,a.vinculacionOAE,a.vinculacionCDS,a.vinculacionDiagnostico,a.vinculacionFCD,a.pertinencia,a.fundamentoPertinencia,a.tratamiento,a.fundamentoTratamiento,a.fechaAnalisis]);
       Object.assign(a, {
         sintesis: fd.get("sintesis")||"",
         tipoAporteAnalisis: fd.get("tipoAporteAnalisis")||"",
@@ -1452,9 +1564,22 @@ function openAporteDetalle(idAporte){
         fundamentoTratamiento: fd.get("fundamentoTratamiento")||"",
         responsableAsignado: nuevoResp,
         fechaAsignacion: (nuevoResp && nuevoResp!==prevResp) ? todayISO() : a.fechaAsignacion,
-        estadoAnalisis: fd.get("estadoAnalisis")||"Pendiente",
+        estadoAnalisis: nuevoEstado,
         fechaAnalisis: fd.get("fechaAnalisis")||""
       });
+      if(nuevoResp !== prevResp){
+        registrarBitacora(a, "Reasignación", prevResp ? ("De "+usuarioNombre(prevResp)+" a "+(nuevoResp?usuarioNombre(nuevoResp):"sin asignar")) : ("Asignado a "+usuarioNombre(nuevoResp)));
+      }
+      if(nuevoEstado !== prevEstado){
+        registrarBitacora(a, "Cambio de estado", prevEstado+" → "+nuevoEstado);
+      }
+      const camposAnalisisNuevo = JSON.stringify([a.sintesis,a.tipoAporteAnalisis,a.materiaPrincipal,a.componenteSistemico,a.contenidoActoInicio,a.vinculacionOAE,a.vinculacionCDS,a.vinculacionDiagnostico,a.vinculacionFCD,a.pertinencia,a.fundamentoPertinencia,a.tratamiento,a.fundamentoTratamiento,a.fechaAnalisis]);
+      if(camposAnalisisNuevo !== camposAnalisisPrev){
+        registrarBitacora(a, "Edición", "Se actualizaron campos de síntesis, clasificación o tratamiento.");
+      }
+      if(nuevoEstado==="Validado" && prevEstado!=="Validado"){
+        registrarBitacora(a, "Cierre", "Análisis validado y cerrado.");
+      }
       saveState();
       closeModal();
       toast("Aporte "+a.idAporte+" actualizado.");
@@ -1474,6 +1599,94 @@ function gridField(labelHtml, controlHtml, full){
 }
 function detailItem(k, v){
   return '<div class="detail-item"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div></div>';
+}
+
+function abrirReporteBitacora(a){
+  const r = registro(a.folioIngreso);
+  const bitacora = (a.bitacora||[]).slice().sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  let txt = "REPORTE RESUMIDO DE SEGUIMIENTO\n";
+  txt += "================================\n";
+  txt += "Aporte: "+a.idAporte+"   Folio de origen: "+a.folioIngreso+"\n";
+  txt += "Declarante: "+(r?r.nombreCompleto:"—")+"\n";
+  txt += "Origen: "+a.origenAporte+"\n";
+  txt += "Estado actual: "+a.estadoAnalisis+"   Responsable actual: "+(a.responsableAsignado?usuarioNombre(a.responsableAsignado):"Sin asignar")+"\n";
+  txt += "--------------------------------\n";
+  txt += "CRONOLOGÍA\n";
+  if(bitacora.length===0){
+    txt += "(sin movimientos registrados)\n";
+  } else {
+    bitacora.forEach(ev=>{
+      txt += fmtFechaHora(ev.fecha)+" · "+ev.accion+" — "+ev.detalle+" (por "+usuarioNombre(ev.usuarioId)+")\n";
+    });
+  }
+  txt += "--------------------------------\n";
+  txt += "Generado el "+fmtFechaHora(new Date().toISOString())+" por "+sesionUsuario().nombre+".\n";
+
+  const body = document.createElement("div");
+  body.innerHTML = '<div class="report-block" id="reporte-texto">'+esc(txt)+'</div>';
+  openModal({
+    title:"Reporte resumido — "+a.idAporte,
+    sub:"Copia este texto para incluirlo en informes o minutas.",
+    body,
+    actions:[
+      {label:"Copiar", cls:"btn primary", onClick:()=>{
+        navigator.clipboard.writeText(txt).then(()=>toast("Reporte copiado al portapapeles.")).catch(()=>toast("No se pudo copiar automáticamente; selecciona el texto manualmente."));
+      }},
+      {label:"Cerrar", cls:"btn", onClick:closeModal}
+    ]
+  });
+}
+
+/* =========================================================
+   VISTA: MAPA DE OBSERVACIONES
+   ========================================================= */
+let mapaObservacionesInstancia = null;
+function renderMapa(){
+  const root = $("#view-mapa");
+  const conUbicacion = state.registros.filter(r=>r.ubicacion && r.ubicacion.lat!=null);
+  root.innerHTML = '<div class="card card-pad">'
+    + '<div class="section-title">Mapa de observaciones</div>'
+    + '<div class="section-sub">Ubicación geográfica declarada en cada ingreso. El color del punto indica su banda de alerta, igual que en el resto de la plataforma.</div>'
+    + (conUbicacion.length===0
+        ? '<div class="empty-state" style="padding:30px;"><div class="ic">🗺️</div>Todavía no hay ingresos con ubicación geográfica registrada.<br><span style="font-size:11.5px;">Se agrega al crear un nuevo ingreso, en la sección "Ubicación geográfica".</span></div>'
+        : '<div id="mapa-observaciones" class="map-box" style="height:480px;"></div>'
+          + '<div class="legend-row">'
+          + '<div class="item"><span class="sw" style="background:'+bandColor("verde")+'"></span>Al día</div>'
+          + '<div class="item"><span class="sw" style="background:'+bandColor("amarillo")+'"></span>Atención</div>'
+          + '<div class="item"><span class="sw" style="background:'+bandColor("naranja")+'"></span>Urgente</div>'
+          + '<div class="item"><span class="sw" style="background:'+bandColor("rojo")+'"></span>Vencido</div>'
+          + '<div class="item"><span class="sw" style="background:'+bandColor("validado")+'"></span>Validado</div>'
+          + '</div>')
+    + '</div>';
+
+  if(conUbicacion.length===0 || typeof L === "undefined") return;
+
+  setTimeout(()=>{
+    const mapDiv = document.getElementById("mapa-observaciones");
+    if(!mapDiv) return;
+    const mapa = L.map(mapDiv).setView([-33.0458, -71.6197], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapa);
+    const puntos = [];
+    conUbicacion.forEach(r=>{
+      const banda = bandaRegistro(r);
+      const colorReal = {verde:"#16a34a",amarillo:"#ca8a04",naranja:"#ea580c",rojo:"#dc2626",validado:"#6366f1"}[banda] || "#1d4ed8";
+      const marker = L.circleMarker([r.ubicacion.lat, r.ubicacion.lng], {
+        radius: 9, color:"#fff", weight:2, fillColor: colorReal, fillOpacity: 0.95
+      }).addTo(mapa);
+      marker.bindPopup(
+        '<b>'+esc(r.folio)+'</b><br>'+esc(r.nombreCompleto)+'<br><span style="font-size:11px;color:#64748b;">'+esc(r.ubicacion.referencia||"")+'</span>'
+        + '<br><a href="#" data-popup-folio="'+esc(r.folio)+'" style="font-size:12px;">Ver detalle →</a>'
+      );
+      marker.on("popupopen", (e)=>{
+        const link = e.popup.getElement().querySelector("[data-popup-folio]");
+        if(link) link.addEventListener("click",(ev)=>{ ev.preventDefault(); openRegistroDetalle(r.folio); });
+      });
+      puntos.push([r.ubicacion.lat, r.ubicacion.lng]);
+    });
+    if(puntos.length>1) mapa.fitBounds(puntos, {padding:[30,30]});
+    setTimeout(()=>mapa.invalidateSize(), 150);
+    mapaObservacionesInstancia = mapa;
+  }, 50);
 }
 
 /* =========================================================
@@ -1699,7 +1912,7 @@ document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeModal(); })
    ========================================================= */
 function buildViews(){
   const content = $("#content");
-  ["dashboard","registros","aportes","diccionario","protocolo","config"].forEach(id=>{
+  ["dashboard","registros","aportes","mapa","diccionario","protocolo","config"].forEach(id=>{
     content.appendChild(el("div",{id:"view-"+id, class:"view"}));
   });
 }
